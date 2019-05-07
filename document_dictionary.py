@@ -6,9 +6,11 @@ This class will be representing a mapping in the form:
 (no_book,no_paragraph):text.
 Useful for retriving and display documents against the query
     """
-    def __init__(self,text = 'bibbina.txt'):
+    def __init__(self,text = 'bibbia.txt'):
         self._corpus = text
         self._dictionary = {}
+        #assigned in the next function
+        self._no_documents = None
 
     def build_dictionary(self):
         """Pretty messy method:
@@ -32,6 +34,7 @@ Useful for retriving and display documents against the query
                     self._dictionary[(book,paragraph)] += line
             for k in self._dictionary:
                 self._dictionary[k] = ''.join(self._dictionary[k])
+        self._no_documents = len(self._dictionary)
                 
     def assign(self,key,item):
         self._dictionary[key] = item            
@@ -45,6 +48,10 @@ Useful for retriving and display documents against the query
 
     def keys(self):
         return self._dictionary.keys()
+    
+    @property
+    def no_documents(self):
+        return self._no_documents
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@ class Dictionary():
     def __init__(self,dict_set):
         self._dict_set = dict_set
         self._token_dictionary = None
+        self.build_dictionary()
         self.dict_len = None
  
     def build_dictionary(self):

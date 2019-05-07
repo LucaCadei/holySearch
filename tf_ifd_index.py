@@ -1,27 +1,31 @@
 from nltk.corpus import stopwords 
 from nltk.tokenize import word_tokenize 
 from document_dictionary import DocumentDictionary
+from nltk.corpus import stopwords
 import re
 import nltk
 from nltk.stem import SnowballStemmer
 from dictionary import Dictionary
 from collections import defaultdict
+from math import log
 
-class SimpleIndex():
+class WeightedIndex():
     """Class implementing a simple index for boolean retrival
     """
 
-    def __init__(self,text='bibbina.txt'):
+    def __init__(self,text='bibbia.txt'):
         self._corpus = text
         self._index = {}
-        self._document_dictionary = DocumentDictionary(text='bibbina.txt')
+        self._document_dictionary = DocumentDictionary(text='bibbia.txt')
         self._document_dictionary.build_dictionary()
-        self._index = None
+        self._boolean_index = None
         #clean dictionary is a map (book,par)-->normalized list of strings
         self._cleaned_dictionary = None
         self._cleaned_dictionary_abs = None
         self._dictionary = None
         self._index = None
+        #total number of documents in the collection
+        self._N = self._document_dictionary.no_documents
         
 
     def clean_text(self):
@@ -60,12 +64,6 @@ class SimpleIndex():
         d.build_dictionary()
         self._dictionary = d 
 
-#    def __getitem__(self,position):
-#        book, paragraph = position
-#        try:
-#            return self._cleaned_dictionary[(book,paragraph)]
-#        except:
-#            return 'Something wrong occurred with keys: ({0},{1})'.format(book,paragraph)
 
     def get_dict(self):
         return self._dictionary
@@ -87,7 +85,7 @@ class SimpleIndex():
         #Creating absolute index
         cleaned_dictionary_abs = dict([(keys_to_abs[k],self._cleaned_dictionary[k]) for k in self._cleaned_dictionary.keys()])
         self._cleaned_dictionary_abs = cleaned_dictionary_abs
-
+    
     def create_boolean_index(self):
         """Creates the index scanning through the cleaned_dictionary abs
            leverages on defaultdict to not check everytime the properties
@@ -99,38 +97,57 @@ class SimpleIndex():
             for w in self._cleaned_dictionary_abs[k]:
                 index[w].update({k})
 
-        self._index = index
-
-    #TODO creates the index based on the choice of the user
-    def create_index(self, index='boolean'):
-        self.create_boolean_index()
+        self._boolean_index = index
 
     
-  
-    def __getitem__(self,key):
-        """È un default_dict, il controllo deve essere fatto runtime
-           e non fare un catch dell'errore
+    def compute_document_frequency(self):
+        """Computes the df term. Period.
         """
-        if key in self._index:
-            return self._index[key]
-        else:
-            return {}
+        N = self._dictionary.dict_len
+        idf_dict = {term:log(N/len(self._boolean_index[term])) for term in self._dictionary}
+        self.idf_dict = idf_dict
+          
 
-    def get_absolute(self,key):
-        return self._document_dictionary[self._abs_to_keys[key]]
-     
+    def compute_term_frequency(self):
+        """Computes the df term, stored as a dict--> term:[(1,df1),(2,df2)...]
+           If a term doesn't appear in a document (0 in the implicit matrix),
+           just don't store anything. Every list is kept in order.
+           Anyway the matrix can be completely reconstructed with this dictionary
+        """
+        tf_dict = defaultdict(list)
+        #Creates a boolean index to not useless check 
+        #already ordered dictionary of words
+        for term in self._dictionary:
+            #get the posting list of the term and count only in the posting list
+            posting_list = list(self._boolean_index[term])
+            for idx in posting_list:
+                #now compute the occurrences of the term in the document idx
+                occurrences = self._cleaned_dictionary_abs[idx].count(term) 
+                tf_dict[term].append((idx,occurrences))
+        self.tf_dict = tf_dict
+       
+    def build_tfidf_dict(self):
+        """This function will complete the tfidf score
+           Is again a fucking dictionary
+           This stuff really need some refactoring mate.
+        """ 
+        #nested
+        def compute(term,tuple_sequence):
+            to_return = [(i,v*self.idf_dict[term]) for (i,v) in tuple_sequence]
+            return to_return 
+
+        tf_idf_dict = {term:compute(term,self.tf_dict[term]) for term in self.tf_dict}
+        self.tf_idf_dict = tf_idf_dict
+               
+#    def create_invereted_index(self):
+#       d = self._clean_dictionary_abs
+
 if __name__ == '__main__':
-    i = SimpleIndex()
-    i.clean_text()
-    #print(i[(1,1)])
-    i.create_dict()
-    #d = i.get_dict()
-    i.create_double_dictionary()
-    i.create_boolean_index()
-    print(i['ciel'])
- 
-            
-        
-
-    
-
+    w = WeightedIndex()
+    w.clean_text()
+    w.create_dict()
+    w.create_double_dictionary()
+    w.create_boolean_index()
+    w.compute_document_frequency()
+    w.compute_term_frequency()
+    w.build_tfidf_dict()
