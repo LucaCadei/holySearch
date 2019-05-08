@@ -138,10 +138,8 @@ class WeightedIndex():
 
         tf_idf_dict = {term:compute(term,self.tf_dict[term]) for term in self.tf_dict}
         self.tf_idf_dict = tf_idf_dict
-               
-#    def create_invereted_index(self):
-#       d = self._clean_dictionary_abs
-
+    
+   
 if __name__ == '__main__':
     w = WeightedIndex()
     w.clean_text()

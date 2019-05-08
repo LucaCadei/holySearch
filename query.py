@@ -4,6 +4,9 @@ from tf_ifd_index import WeightedIndex
 import re
 import nltk
 from nltk.corpus import stopwords
+from collections import Counter, defaultdict
+from math import sqrt
+import time
 
 #TODO MEGLIO GENERALIZZARE TUTTO PER LE PROSSIME QUERY
 class Query():
@@ -29,6 +32,8 @@ class Query():
         self.tf_idf_index.compute_document_frequency()
         self.tf_idf_index.compute_term_frequency()
         self.tf_idf_index.build_tfidf_dict()
+   
+        self.normalized_document_length_dict = None
 
 
     def boolean_query(self, query = 'jesus AND christ'):
@@ -90,8 +95,8 @@ class Query():
         retrived = []#will be in form:(n_doc,score)
         for idx in range(len(self.tf_idf_index._cleaned_dictionary_abs)):
 #            print(set(self.tf_idf_index._cleaned_dictionary_abs[idx]))
-            #print(set(query_list))
-            #print(set(query_list) <= set(self.tf_idf_index._cleaned_dictionary_abs[idx]))
+            print(set(query_list))
+            print(set(query_list) <= set(self.tf_idf_index._cleaned_dictionary_abs[idx]))
             if set(query_list)<=set(self.tf_idf_index._cleaned_dictionary_abs[idx]):
                 #devo cercare nella lista dei doc:tf associata ai termini della query il termine corrispondente 
                 #print(self.tf_idf_index.tf_idf_dict[q])
@@ -105,18 +110,82 @@ class Query():
         #TODO considerare solo i top k retrived o qualche altro metodo di cutoff
         
         self.last_retrived = sorted_retrived
+    
+    #Superdumb and slow version
+    def cosine_query(self,query='uccisione di re erode'):
+        """Implementation of the algorithm by Manning, Introduction to Information retrival, p.125
+        """
+        #First I calculate tf-idf score of the query
+        #Firstly I clean the query and create a list
+        tokens_text = nltk.Text(nltk.wordpunct_tokenize(query))
+        #Eliminates all non textual chars
+        final = [w.lower() for w in tokens_text if w.isalpha()]
+        stopword = set(stopwords.words('italian'))
+        final_no_sw = [w for w in final if w not in stopword]        
+        s = SnowballStemmer('italian')
+        query_list = [s.stem(term) for term in final_no_sw]
+        #Term Frequency 
+        plain_count = Counter(query_list)
+        #multiply by the general inverted docuement frequency
+        for term in plain_count:
+            plain_count[term] *= self.tf_idf_index.idf_dict[term]
+        
+        #Now I calculate all the scores for all the docuemnt
+        
+        #First I need to calculate the length of all the tf-idf documents in the corspus
+        #My god this will be rough
+   
+        lengths = defaultdict(list)
+   
+        for term in self.tf_idf_index.tf_idf_dict:
+            for couple in self.tf_idf_index.tf_idf_dict[term]:
+                lengths[couple[0]].append(couple[1])
+ 
+        for idx in range(len(lengths)):
+            lengths[idx] = sqrt(sum([x**2 for x in lengths[idx]]))
+        print(lengths)
+        self.lengths = lengths
+        
+        #FINITO IL CALCOLO DEI FATTORI DI NORMALIZZAZIONE
+        scores = defaultdict(list)
+        #computing the dot product
+        for t in plain_count:
+            posting_t = self.tf_idf_index.tf_idf_dict[t]
+            for el in posting_t:
+                scores[el[0]].append(el[1]*plain_count[t])
+        #normalization
+        for i in scores: 
+                scores[i] = sum(scores[i])/lengths[i] 
+        
+        #Computing the top k sorting the array WOULD BE BETTER IF I HAD A FUCKING HEAP
+        print(scores)
+        scores = list(scores.items())
+        sorted_scores = sorted(scores, key= lambda x:x[1],reverse=True)
+        
+        self.last_retrived = sorted_scores[:3]        
 
+ 
     def print_tf_idf(self):
-        for i in range(5):
+        for i in range(3):
             print(self.tf_idf_index._abs_to_keys[self.last_retrived[i][0]])
             print(self.tf_idf_index._document_dictionary[self.tf_idf_index._abs_to_keys[self.last_retrived[i][0]]])
             print('\n\n')
             
         
 if __name__ == '__main__':
+    tic = time.time()
     q = Query()
     #q.boolean_query('vantaggio AND fatica')
     #print(results)
-    q.tf_idf_query('l\'arca di noe')
+    #q.tf_idf_query('davide e golia')
+    #q.print_tf_idf() 
+    q.cosine_query()
     q.print_tf_idf()
+    toc = time.time()
+    print('Elapsed time --> {}'.format(toc-tic))
+    query = input('Che cazzo vuoi dal porcaccio di dio?')
+    while query != 'quit':
+        q.cosine_query(query)
+        q.print_tf_idf()
+        query = input('Che cazzo vuoi dal porcaccio di dio?')
 

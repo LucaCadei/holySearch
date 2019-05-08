@@ -11,10 +11,10 @@ class SimpleIndex():
     """Class implementing a simple index for boolean retrival
     """
 
-    def __init__(self,text='bibbina.txt'):
+    def __init__(self,text='bibbia.txt'):
         self._corpus = text
         self._index = {}
-        self._document_dictionary = DocumentDictionary(text='bibbina.txt')
+        self._document_dictionary = DocumentDictionary(text='bibbia.txt')
         self._document_dictionary.build_dictionary()
         self._index = None
         #clean dictionary is a map (book,par)-->normalized list of strings
@@ -100,6 +100,7 @@ class SimpleIndex():
                 index[w].update({k})
 
         self._index = index
+  
 
     #TODO creates the index based on the choice of the user
     def create_index(self, index='boolean'):
