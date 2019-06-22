@@ -183,9 +183,9 @@ if __name__ == '__main__':
     q.print_tf_idf()
     toc = time.time()
     print('Elapsed time --> {}'.format(toc-tic))
-    query = input('Che cazzo vuoi dal porcaccio di dio?')
+    query = input('Chiedi e ti sarà dato --> ')
     while query != 'quit':
         q.cosine_query(query)
         q.print_tf_idf()
-        query = input('Che cazzo vuoi dal porcaccio di dio?')
+        query = input('Chiedi e ti sarà dato --> ')
 
